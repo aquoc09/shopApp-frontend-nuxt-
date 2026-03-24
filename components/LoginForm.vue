@@ -134,7 +134,6 @@ export default {
     },
 
     async submitForm() {
-      // 🔥 Validate first
       if (!this.validateForm()) {
         this.notify([false, "Invalid input"])
         return
