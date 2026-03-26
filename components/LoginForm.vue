@@ -101,33 +101,69 @@
 
 <script>
     export default {
-      data() {
-        return {
-          userInfo: {
-            email: '69@1337.com',
-            password: 'lollol'
-          },
-          show: true,
-          errors: {}
-        }
+  data() {
+    return {
+      userInfo: {
+        email: '',
+        password: ''
       },
-      methods: {
-        async submitForm() {
-          let loader = this.$loading.show()
-          await this.$auth.loginWith('local', {
-            data: {
-              username: this.userInfo.email,
-              password: this.userInfo.password
-            }
-          }).then(async () => {
-            await this.load()
-            this.notify([true, "Welcome back."])
-            this.show = false
-          }).catch(err => {    
-              this.notify([false, "make sure your data is correct"])
-          })
-          loader.hide()
-        }
-      }
+      show: true,
+      errors: {}
     }
+  },
+
+  methods: {
+    validateForm() {
+      this.errors = {}
+
+      // Email regex
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+      // Password regex (at least 6 chars)
+      const passwordRegex = /^.{6,}$/
+
+      if (!this.userInfo.email) {
+        this.errors.email = "Email is required"
+      } else if (!emailRegex.test(this.userInfo.email)) {
+        this.errors.email = "Invalid email format"
+      }
+
+      if (!this.userInfo.password) {
+        this.errors.password = "Password is required"
+      } else if (!passwordRegex.test(this.userInfo.password)) {
+        this.errors.password = "Password must be at least 6 characters"
+      }
+
+      return Object.keys(this.errors).length === 0
+    },
+
+    async submitForm() {
+      // Stop if validation fails
+      if (!this.validateForm()) {
+        this.notify([false, "Please fix validation errors"])
+        return
+      }
+
+      let loader = this.$loading.show()
+
+      try {
+        await this.$auth.loginWith('local', {
+          data: {
+            username: this.userInfo.email,
+            password: this.userInfo.password
+          }
+        })
+
+        await this.load()
+        this.notify([true, "Welcome back."])
+        this.show = false
+
+      } catch (err) {
+        this.notify([false, "Make sure your data is correct"])
+      }
+
+      loader.hide()
+    }
+  }
+}
 </script>
