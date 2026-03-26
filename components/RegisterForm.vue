@@ -116,54 +116,127 @@ export default {
   data() {
     return {
       userInfo: {
-        email: '6à9@1337jjj.com',
-        password: 'lollol',
-        password_confirmation: 'lollol',
-        firstName: 'lollol',
-        lastName: 'dzdz',
-        username: 'lollojjjl'
+        email: '',
+        password: '',
+        password_confirmation: '',
+        firstName: '',
+        lastName: '',
+        username: ''
       },
       show: true,
       errors: {},
       step: 1
     }
   },
+
   methods: {
+    validateForm() {
+      this.errors = {}
+
+      //  Email regex
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+      //  Password: min 6 chars
+      const passwordRegex = /^.{6,}$/
+
+      //  Username: only letters + numbers (3-20 chars)
+      const usernameRegex = /^[a-zA-Z0-9]{3,20}$/
+
+      //  Name: letters only
+      const nameRegex = /^[a-zA-Z]{2,30}$/
+
+      // ===== EMAIL =====
+      if (!this.userInfo.email) {
+        this.errors.email = "Email is required"
+      } else if (!emailRegex.test(this.userInfo.email)) {
+        this.errors.email = "Invalid email format"
+      }
+
+      // ===== PASSWORD =====
+      if (!this.userInfo.password) {
+        this.errors.password = "Password is required"
+      } else if (!passwordRegex.test(this.userInfo.password)) {
+        this.errors.password = "Password must be at least 6 characters"
+      }
+
+      // ===== CONFIRM PASSWORD =====
+      if (this.userInfo.password !== this.userInfo.password_confirmation) {
+        this.errors.password_confirmation = "Passwords do not match"
+      }
+
+      // ===== USERNAME =====
+      if (!this.userInfo.username) {
+        this.errors.username = "Username is required"
+      } else if (!usernameRegex.test(this.userInfo.username)) {
+        this.errors.username = "Username must be 3-20 chars, letters & numbers only"
+      }
+
+      // ===== FIRST NAME =====
+      if (!this.userInfo.firstName) {
+        this.errors.firstName = "First name is required"
+      } else if (!nameRegex.test(this.userInfo.firstName)) {
+        this.errors.firstName = "First name must contain only letters"
+      }
+
+      // ===== LAST NAME =====
+      if (!this.userInfo.lastName) {
+        this.errors.lastName = "Last name is required"
+      } else if (!nameRegex.test(this.userInfo.lastName)) {
+        this.errors.lastName = "Last name must contain only letters"
+      }
+
+      return Object.keys(this.errors).length === 0
+    },
+
     async submitForm() {
+      // 🚫 Validate before API call
+      if (!this.validateForm()) {
+        this.notify([false, "Please fix validation errors"])
+        return
+      }
+
       let loader = this.$loading.show()
-      let res = await this.$axios.post('api/register', this.userInfo).then(async res => {
+
+      try {
+        let res = await this.$axios.post('api/register', this.userInfo)
+
         if (res.data.success) {
           await this.$auth.loginWith('local', {
             data: {
               username: this.userInfo.email,
               password: this.userInfo.password
             }
-          }).then(async () => {
-            await this.load(this.$auth.user, this.$store)
-            this.notify([true, "Welcome to chopshop."])
-            this.step = 2
-          }).catch(err => console.log(err))
-        } else {
-        }
-      }).catch(err => {
-        const errCodes = [404, 422, 403]
-        if (errCodes.indexOf(err.response.status) !== -1) {
-          let message = err.response.status == 422 ?
-            err.response.data.message :
-            err.response.data.data.message;
+          })
 
-          let errors = err.response.status == 422 ?
-            err.response.data.errors :
-            err.response.data.data.erroprs;
+          await this.load(this.$auth.user, this.$store)
+          this.notify([true, "Welcome to chopshop."])
+          this.step = 2
+
+        } else {
+          this.notify([false, "Registration failed"])
+        }
+
+      } catch (err) {
+        const errCodes = [404, 422, 403]
+
+        if (err.response && errCodes.includes(err.response.status)) {
+          let message = err.response.status == 422
+            ? err.response.data.message
+            : err.response.data.data.message
+
+          let errors = err.response.status == 422
+            ? err.response.data.errors
+            : err.response.data.data.errors // ⚠️ fixed typo (erroprs)
 
           this.notify([false, message])
           this.errors = errors
-        } else {
-          console.log(err);
 
+        } else {
+          console.log(err)
           this.notify([false, "Something went wrong :O, contact us"])
         }
-      })
+      }
+
       loader.hide()
     }
   }
